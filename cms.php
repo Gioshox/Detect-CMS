@@ -143,23 +143,30 @@ foreach ($websites as $link) {
         $link = "https://" . $link;
     }
 
-    $detectedCMS = detectCMSUsingLibrary($link); // Detect CMS using the library
+    $detectedCMS = detectCMSUsingLibrary($link);
 
-    if (strpos($detectedCMS, "Error") === false) {
-        // CMS detection was successful, and it's not an error message
-        // echo "Detected CMS: " . $detectedCMS . "\n";
-    } else {
-        // CMS detection failed or encountered an error
-        // echo "CMS couldn't be detected\n";
-        // $detectedCMS = "Unknown";
+    // Check if an error occurred while detecting CMS
+    if (strpos($detectedCMS, "Error") !== false) {
+        $detectedCMS = "Error: CMS detection failed or encountered an error";
     }
 
-    $result = CMSdetectWithVersion($link); // Detect CMS with version and JavaScript classes
-    $generatorInfo = extractGeneratorInfo($link); // Extract Generator Info
+    $result = CMSdetectWithVersion($link);
+
+    // Check if an error occurred while detecting CMS with version
+    if (strpos($result['CMS Info'], "Error") !== false) {
+        $result['CMS Info'] = "Error: CMS detection failed or encountered an error";
+    }
+
+    $generatorInfo = extractGeneratorInfo($link);
+
+    // Check if an error occurred while extracting Generator Info
+    if (strpos($generatorInfo, "Error") !== false) {
+        $generatorInfo = "Error: Generator Info extraction failed or encountered an error";
+    }
 
     $rowData = [
         'Website' => str_replace("https://", "", trim($link, "'\"")),
-        'CMS Detected' => $detectedCMS, // Add detected CMS to row data
+        'CMS Detected' => $detectedCMS,
         'CMS Info' => trim($result['CMS Info'], "'\""),
         'Generator Info' => $generatorInfo,
         'JavaScript Classes' => "JavaScript Classes: " . $result['JavaScript Classes'],
@@ -167,15 +174,14 @@ foreach ($websites as $link) {
 
     $rowData2 = [
         'Website' => str_replace("https://", "", trim($link, "'\"")),
-        'CMS Detected' => $detectedCMS, // Add detected CMS to row data
+        'CMS Detected' => $detectedCMS,
         'CMS Version' => trim($result['CMS Version'], "'\""),
     ];
 
-    fputcsv($outputFile, $rowData); // Write row data to the output CSV file
-    fputcsv($outputFile2, $rowData2); // Write row data to the output CSV file
+    fputcsv($outputFile, $rowData);
+    fputcsv($outputFile2, $rowData2);
 }
 
-fclose($outputFile); // Close the output CSV file
-fclose($outputFile2); // Close the output CSV file
-echo "Processing completed. Results are saved in 'results_" . time() . ".csv' and Debug information can be found in 'debug_" . time() .".csv"; // Provide processing completion message
-?>
+fclose($outputFile);
+fclose($outputFile2);
+echo "Processing completed. Results are saved in 'results_" . time() . ".csv' and Debug information can be found in 'debug_" . time() .".csv";
