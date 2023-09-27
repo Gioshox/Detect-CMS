@@ -9,6 +9,9 @@ set_time_limit(0);
 $currentRow = 1;
 echo "\nStarting process...\n";
 
+// Array to store processed URLs
+$processedUrls = [];
+
 /**
  * Function to detect CMS using DetectCMS library.
  *
@@ -141,7 +144,13 @@ if (($handle = fopen('list.csv', 'r')) !== false) {
     
     while (($data = fgetcsv($handle)) !== false) {
         $websiteUrl = $data[0];
-        $websites[] = $websiteUrl;
+        // Check if the URL is not processed before processing it
+        if (!in_array($websiteUrl, $processedUrls)) {
+            $websites[] = $websiteUrl;
+            $processedUrls[] = $websiteUrl; // Add the URL to the processed URLs array
+        } else {
+            // echo "\nURL is a duplicate: " . $websiteUrl;
+        }
     }
     fclose($handle);
 }
@@ -203,3 +212,4 @@ foreach ($websites as $link) {
 fclose($outputFile);
 fclose($outputFile2);
 echo "\nProcessing completed. Results are saved in 'results_" . time() . ".csv' and Debug information can be found in 'debug_" . time() .".csv";
+?>
