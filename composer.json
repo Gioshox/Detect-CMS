@@ -1,0 +1,6 @@
+{
+    "require": {
+        "krisseck/detect-cms": "dev-master",
+        "guzzlehttp/guzzle": "^7.8"
+    }
+}
