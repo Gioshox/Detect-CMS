@@ -5,6 +5,10 @@ include(__DIR__ . "/vendor/autoload.php");
 // Set the script execution time to unlimited
 set_time_limit(0);
 
+// Indicate that the process has started.
+$currentRow = 1;
+echo "\nStarting process...\n";
+
 /**
  * Function to detect CMS using DetectCMS library.
  *
@@ -83,12 +87,21 @@ function CMSdetectWithVersion($url) {
     foreach ($cmsPatterns as $cmsName => $pattern) {
         // Check if any HTML element matches CMS patterns
         if (preg_match($pattern, $fileContents, $matches)) {
-            $version = $matches[1];
-            $cmsInfo = $cmsName . " " . $version; // Format CMS info as "CMSName Version"
-            $cmsVersion = $version; // For extracting the version only.
+            // Check if the array key 1 exists before accessing it
+            if (isset($matches[1])) {
+                $version = $matches[1];
+                $cmsInfo = $cmsName . " " . $version; // Format CMS info as "CMSName Version"
+                $cmsVersion = $version; // For extracting the version only.
+            } else {
+                // Handle the case where array key 1 doesn't exist
+                $version = "Unknown";
+                $cmsInfo = $cmsName . " " . $version; // Format CMS info as "CMSName Version"
+                $cmsVersion = $version; // For extracting the version only.
+            }
             break;
         }
     }
+    
 
     /* Uncomment this if you wan't to set a value for null like Unknown for example.
     if ($cmsInfo == null) {
@@ -111,12 +124,15 @@ function CMSdetectWithVersion($url) {
  * @return string The Generator Info or a message if not found.
  */
 function extractGeneratorInfo($url) {
-    $cms = get_meta_tags($url); // Get meta tags from the website
-
-    if (!empty($cms['generator'])) {
-        return "Generator Info: " . trim($cms['generator'], "'\""); // Format and return Generator Info
-    } else {
-        return "Generator Info not found for " . $url; // Return a message if Generator Info is not found
+    try {
+        $cms = @get_meta_tags($url); // Use @ to suppress warnings
+        if (!empty($cms['generator'])) {
+            return "Generator Info: " . trim($cms['generator'], "'\""); // Format and return Generator Info
+        } else {
+            return "Generator Info not found for " . $url; // Return a message if Generator Info is not found
+        }
+    } catch (Exception $e) {
+        return "Error: Generator Info extraction failed or encountered an error: " . $e->getMessage(); // Handle exceptions and return an error message
     }
 }
 
@@ -180,8 +196,10 @@ foreach ($websites as $link) {
 
     fputcsv($outputFile, $rowData);
     fputcsv($outputFile2, $rowData2);
+    echo "\nLink: " . $link . " Done on row " . $currentRow;
+    $currentRow++;
 }
 
 fclose($outputFile);
 fclose($outputFile2);
-echo "Processing completed. Results are saved in 'results_" . time() . ".csv' and Debug information can be found in 'debug_" . time() .".csv";
+echo "\nProcessing completed. Results are saved in 'results_" . time() . ".csv' and Debug information can be found in 'debug_" . time() .".csv";
