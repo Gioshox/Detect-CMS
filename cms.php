@@ -36,7 +36,7 @@ function CMSdetectWithVersion($url) {
         // CMS patterns
         "Drupal" => '/<meta name="generator" content="Drupal (\d+(\.\d+)*)/',
         "WordPress" => '/<meta name="generator" content="WordPress (\d+\.\d+\.\d+)/',
-        "WordPress" => '/<meta\s+name="generator"\s+content="WordPress\s+([\d.]+)"/',
+        "WordPress2" => '/<meta\s+name="generator"\s+content="WordPress\s+([\d.]+)"/',
         "Joomla" => '/<meta name="generator" content="Joomla! (\d+\.\d+)/',
         "Liferay" => '/Powered by Liferay (\d+\.\d+\.\d+)/',
         "Elementor" => '/<meta name="generator" content="Elementor (\d+(\.\d+)*)/',
@@ -46,9 +46,9 @@ function CMSdetectWithVersion($url) {
         "Webflow" => '/<meta\s+content="Webflow"\s+name="generator">/',
         "Wix.com Website Builder" => '/<meta\s+name="generator"\s+content="Wix\.com Website Builder">/',
         "concrete5" => '/<meta\s+name="generator"\s+content="concrete5\s+-\s+(\d+\.\d+\.\d+(\.\d+)?)">/',
-        "Joomla" => '/<meta\s+name="generator"\s+content="Joomla!?\s*-\s*([\w\s]+)">/',
+        "Joomla2" => '/<meta\s+name="generator"\s+content="Joomla!?\s*-\s*([\w\s]+)">/',
         "Chilisystem" => '/<meta\s+name="Generator"\s+content="Chilisystem,\s+(https:\/\/www\.chilisystem\.fi\/)?([\w\s\.]+)">/',
-        "Joomla" => '/<meta\s+name="generator"\s+content="Helix Ultimate\s+-\s+The\s+Most\s+Popular\s+Joomla!\s+Template\s+Framework\.">/',
+        "Joomla3" => '/<meta\s+name="generator"\s+content="Helix Ultimate\s+-\s+The\s+Most\s+Popular\s+Joomla!\s+Template\s+Framework\.">/',
         "Gatsby" => '/<meta\s+name="generator"\s+content="Gatsby\s+(\d+\.\d+\.\d+)"/',
         "vBulletin" => '/<meta name="generator" content="vBulletin (\d+\.\d+\.\d+)/',
         "Magento" => '/Magento (\d+\.\d+\.\d+)/',
@@ -69,6 +69,7 @@ function CMSdetectWithVersion($url) {
     curl_close($ch); // Close cURL session
 
     $javascriptTags = array();
+    $jsClasses = "";
 
     // Extract JavaScript classes from the HTML content
     preg_match_all('/<script.*?class=["\'](.*?)["\'].*?>/', $fileContents, $javascriptTags);
@@ -77,12 +78,14 @@ function CMSdetectWithVersion($url) {
     }
 
     $cmsInfo = null;
+    $cmsVersion = null;
 
     foreach ($cmsPatterns as $cmsName => $pattern) {
         // Check if any HTML element matches CMS patterns
         if (preg_match($pattern, $fileContents, $matches)) {
             $version = $matches[1];
             $cmsInfo = $cmsName . " " . $version; // Format CMS info as "CMSName Version"
+            $cmsVersion = $version; // For extracting the version only.
             break;
         }
     }
@@ -96,6 +99,7 @@ function CMSdetectWithVersion($url) {
     // Return CMS information and JavaScript classes as an associative array
     return [
         'CMS Info' => $cmsInfo,
+        'CMS Version' => $cmsVersion,
         'JavaScript Classes' => $jsClasses,
     ];
 }
@@ -118,6 +122,7 @@ function extractGeneratorInfo($url) {
 
 $websites = [];
 if (($handle = fopen('list.csv', 'r')) !== false) {
+    
     while (($data = fgetcsv($handle)) !== false) {
         $websiteUrl = $data[0];
         $websites[] = $websiteUrl;
@@ -125,7 +130,12 @@ if (($handle = fopen('list.csv', 'r')) !== false) {
     fclose($handle);
 }
 
-$outputFile = fopen('results' . '_' . time() . '.csv', 'w');
+$outputFile = fopen('debug' . '_' . time() . '.csv', 'w');
+$outputFile2 = fopen('results' . '_' . time() . '.csv', 'w');
+
+// Add the header row
+fputcsv($outputFile, ['WWW-osoite', 'CMS', 'Lisätiedot', 'Generaattori tiedot', 'JavaScript luokat'], ';');
+fputcsv($outputFile2, ['WWW-osoite', 'CMS', 'Versio'], ';');
 
 foreach ($websites as $link) {
     $link = trim($link, "; \t\n\r\0\x0B");
@@ -140,7 +150,6 @@ foreach ($websites as $link) {
         // echo "Detected CMS: " . $detectedCMS . "\n";
     } else {
         // CMS detection failed or encountered an error
-        // Handle the error (e.g., log it or display a message)
         // echo "CMS couldn't be detected\n";
         // $detectedCMS = "Unknown";
     }
@@ -156,9 +165,17 @@ foreach ($websites as $link) {
         'JavaScript Classes' => "JavaScript Classes: " . $result['JavaScript Classes'],
     ];
 
+    $rowData2 = [
+        'Website' => str_replace("https://", "", trim($link, "'\"")),
+        'CMS Detected' => $detectedCMS, // Add detected CMS to row data
+        'CMS Version' => trim($result['CMS Version'], "'\""),
+    ];
+
     fputcsv($outputFile, $rowData); // Write row data to the output CSV file
+    fputcsv($outputFile2, $rowData2); // Write row data to the output CSV file
 }
 
 fclose($outputFile); // Close the output CSV file
-echo "Processing completed. Results are saved in 'results_" . time() . ".csv'."; // Provide processing completion message
+fclose($outputFile2); // Close the output CSV file
+echo "Processing completed. Results are saved in 'results_" . time() . ".csv' and Debug information can be found in 'debug_" . time() .".csv"; // Provide processing completion message
 ?>
