@@ -9,7 +9,7 @@ set_time_limit(0);
 $time = time();
 
 // Indicate that the process has started.
-$currentRow = 1;
+$currentRow = 0;
 echo "\nStarting process...\n";
 
 // Array to store processed URLs
@@ -67,6 +67,7 @@ function CMSdetectWithVersion($url) {
         // ... you can add more
     );
 
+    // groups for cmsPatterns
     $cmsNameMapping = array(
         "WordPress" => array("WordPress", "WordPress2", "WordPress3"),
         "Joomla" => array("Joomla", "Joomla2", "Joomla3"),
@@ -81,6 +82,7 @@ function CMSdetectWithVersion($url) {
     curl_setopt($ch, CURLOPT_URL, $url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_HEADER, false);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
     $fileContents = curl_exec($ch); // Execute cURL request
     curl_close($ch); // Close cURL session
 
@@ -118,8 +120,9 @@ function CMSdetectWithVersion($url) {
                 $cmsVersion = $version; // For extracting the version only.
             } else {
                 // Handle the case where array key 1 doesn't exist
-                $version = "Unknown";
-                $cmsInfo = $cmsName . " " . $version; // Format CMS info as "CMSName Version"
+                $version = null;
+                $cmsName = null;
+                $cmsInfo = null; // Format CMS info as "CMSName Version"
                 $cmsVersion = $version; // For extracting the version only.
             }
             break;
@@ -154,7 +157,7 @@ function extractGeneratorInfo($url) {
         if (!empty($cms['generator'])) {
             return "Generator Info: " . trim($cms['generator'], "'\""); // Format and return Generator Info
         } else {
-            return "Generator Info not found for " . $url; // Return a message if Generator Info is not found
+            return "Error: Generator Info not found for " . $url; // Return a message if Generator Info is not found
         }
     } catch (Exception $e) {
         return "Error: Generator Info extraction failed or encountered an error: " . $e->getMessage(); // Handle exceptions and return an error message
@@ -212,23 +215,24 @@ foreach ($websites as $link) {
     }
 
     // detectedCMS is null or an error was encountered but my method was successfull we can use it as the CMS name.
-    if($detectedCMS == null || strpos($detectedCMS, "Error") !== false && $result['CMS Name'] != null) {
+    
+    if($detectedCMS === null && strpos($generatorInfo, "Error") === true  && $result['CMS Name'] !== null) {
         $detectedCMS = $result['CMS Name'];
     }
 
-    $rowData = [
-        'Website' => str_replace("https://", "", trim($link, "'\"")),
-        'CMS Detected' => $detectedCMS,
-        'CMS Info' => trim($result['CMS Version'], "'\""),
-        'Generator Info' => $generatorInfo,
-        'JavaScript Classes' => "JavaScript Classes: " . $result['JavaScript Classes'],
-    ];
-
-    $rowData2 = [
-        'Website' => str_replace("https://", "", trim($link, "'\"")),
-        'CMS Detected' => $detectedCMS,
-        'CMS Version' => trim($result['CMS Version'], "'\""),
-    ];
+        $rowData = [
+            'Website' => str_replace("https://", "", trim($link, "'\"")),
+            'CMS Detected' => $detectedCMS,
+            'CMS Info' => trim($result['CMS Version'], "'\""),
+            'Generator Info' => $generatorInfo,
+            'JavaScript Classes' => "JavaScript Classes: " . $result['JavaScript Classes'],
+        ];
+    
+        $rowData2 = [
+            'Website' => str_replace("https://", "", trim($link, "'\"")),
+            'CMS Detected' => $detectedCMS,
+            'CMS Version' => trim($result['CMS Version'], "'\""),
+        ];
 
     fputcsv($outputFile, $rowData);
     fputcsv($outputFile2, $rowData2);
