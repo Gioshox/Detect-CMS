@@ -115,6 +115,7 @@ function CMSdetectWithVersion($url) {
     // Return CMS information and JavaScript classes as an associative array
     return [
         'CMS Info' => $cmsInfo,
+        'CMS Name' => $cmsName,
         'CMS Version' => $cmsVersion,
         'JavaScript Classes' => $jsClasses,
     ];
@@ -159,8 +160,8 @@ $outputFile = fopen('debug' . '_' . time() . '.csv', 'w');
 $outputFile2 = fopen('results' . '_' . time() . '.csv', 'w');
 
 // Add the header row
-fputcsv($outputFile, ['WWW-osoite', 'CMS', 'Lisätiedot', 'Generaattori tiedot', 'JavaScript luokat'], ';');
-fputcsv($outputFile2, ['WWW-osoite', 'CMS', 'Versio'], ';');
+fputcsv($outputFile, ['WWW-osoite', 'CMS', 'Lisätiedot', 'Generaattori tiedot', 'JavaScript luokat'], ',');
+fputcsv($outputFile2, ['WWW-osoite', 'CMS', 'Versio'], ',');
 
 foreach ($websites as $link) {
     $link = trim($link, "; \t\n\r\0\x0B");
@@ -189,10 +190,15 @@ foreach ($websites as $link) {
         $generatorInfo = "Error: Generator Info extraction failed or encountered an error";
     }
 
+    // detectedCMS is null or an error was encountered but my method was successfull we can use it as the CMS name.
+    if($detectedCMS == null || strpos($detectedCMS, "Error") !== false && $result['CMS Name'] != null) {
+        $detectedCMS = $result['CMS Name'];
+    }
+
     $rowData = [
         'Website' => str_replace("https://", "", trim($link, "'\"")),
         'CMS Detected' => $detectedCMS,
-        'CMS Info' => trim($result['CMS Info'], "'\""),
+        'CMS Info' => trim($result['CMS Version'], "'\""),
         'Generator Info' => $generatorInfo,
         'JavaScript Classes' => "JavaScript Classes: " . $result['JavaScript Classes'],
     ];
