@@ -5,6 +5,9 @@ include(__DIR__ . "/vendor/autoload.php");
 // Set the script execution time to unlimited
 set_time_limit(0);
 
+// set the time 
+$time = time();
+
 // Indicate that the process has started.
 $currentRow = 1;
 echo "\nStarting process...\n";
@@ -174,8 +177,8 @@ if (($handle = fopen('list.csv', 'r')) !== false) {
     fclose($handle);
 }
 
-$outputFile = fopen('debug' . '_' . time() . '.csv', 'w');
-$outputFile2 = fopen('results' . '_' . time() . '.csv', 'w');
+$outputFile = fopen('debug' . '_' . $time . '.csv', 'w');
+$outputFile2 = fopen('results' . '_' . $time . '.csv', 'w');
 
 // Add the header row
 fputcsv($outputFile, ['WWW-osoite', 'CMS', 'Lisätiedot', 'Generaattori tiedot', 'JavaScript luokat'], ',');
@@ -235,5 +238,5 @@ foreach ($websites as $link) {
 
 fclose($outputFile);
 fclose($outputFile2);
-echo "\nProcessing completed. Results are saved in 'results_" . time() . ".csv' and Debug information can be found in 'debug_" . time() .".csv";
+echo "\nProcessing completed. Results are saved in 'results_" . $time . ".csv' and Debug information can be found in 'debug_" . $time .".csv";
 ?>
