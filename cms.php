@@ -64,6 +64,12 @@ function CMSdetectWithVersion($url) {
         // ... you can add more
     );
 
+    $cmsNameMapping = array(
+        "WordPress" => array("WordPress", "WordPress2", "WordPress3"),
+        "Joomla" => array("Joomla", "Joomla2", "Joomla3"),
+        // ... you can add more as needed
+    );
+
     // Ensure the URL starts with "https://"
     $url = preg_replace('~^(?:f|ht)tps?://~i', 'https://', $url);
 
@@ -93,7 +99,19 @@ function CMSdetectWithVersion($url) {
             // Check if the array key 1 exists before accessing it
             if (isset($matches[1])) {
                 $version = $matches[1];
-                $cmsInfo = $cmsName . " " . $version; // Format CMS info as "CMSName Version"
+    
+                // Check if $cmsName should be grouped
+                foreach ($cmsNameMapping as $groupedName => $namesToGroup) {
+                    if (in_array($cmsName, $namesToGroup)) {
+                        $cmsInfo = $groupedName . " " . $version;
+                        break;
+                    }
+                }
+    
+                if (!isset($cmsInfo)) {
+                    $cmsInfo = $cmsName . " " . $version;
+                }
+    
                 $cmsVersion = $version; // For extracting the version only.
             } else {
                 // Handle the case where array key 1 doesn't exist
