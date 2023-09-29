@@ -50,14 +50,14 @@ example5.com
 The script generates a CSV file named `results_timestamp.csv` containing the following columns:
 
 - `Website`: The processed website's URL.
-- `CMS Detected`: The detected CMS or an "Unknown" label if the CMS couldn't be identified.
+- `CMS Detected`: The detected CMS or an empty field if the CMS couldn't be identified.
 - `CMS Info`: The version or details of the detected CMS.
 - `Generator Info`: Information extracted from the website's meta tags (if available).
 - `JavaScript Classes`: A list of JavaScript classes found on the website.
 
 ## Contributing
 
-Contributions and improvements to this script are welcome. Feel free to submit issues or pull requests on the [GitHub repository](https://github.com/Gioshox/detect).
+Contributions and improvements to this script are welcome. Feel free to submit issues or pull requests on the [GitHub repository](https://github.com/Gioshox/Detect-CMS).
 
 ## License
 
@@ -73,10 +73,7 @@ This project was inspired by the RED_HAWK project, which provided the initial co
 
 This project was made possible with the help of various online communities, forums, and resources. We would like to express our gratitude to the developers and contributors who have shared their knowledge and insights.
 
-We would also like to acknowledge the OpenAI GPT-3 model, which provided assistance in answering questions related to this project.
-
 - [RED_HAWK](https://github.com/Tuhinshubhra/RED_HAWK)
 - [PHP Documentation](https://www.php.net/docs.php)
 - [Stack Overflow](https://stackoverflow.com/)
 - [GitHub Community](https://github.community/)
-- [OpenAI GPT-3](https://openai.com/)
