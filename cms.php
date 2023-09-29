@@ -237,12 +237,19 @@ foreach ($websites as $link) {
         $result['CMS Version'] = $matches[0];
     } elseif($detectedCMS == "Typo3" && (preg_match('/\b4\.4\b/', $generatorInfo, $matches))) {
         $result['CMS Version'] = $matches[0];
+    } elseif($detectedCMS = "TremediaCMS" && (preg_match('/\b4\.0\b/', $generatorInfo, $matches))) {
+        $result['CMS Version'] = $matches[0];
     }
 
+    // Extra checks for picking up CMS names from generator info.
     if(strpos($generatorInfo, "Gatsby")) {
         $detectedCMS = "Gatsby";
     }elseif (strpos($generatorInfo, "Wix.com")) {
         $detectedCMS = "Wix.com";
+    }elseif (strpos($generatorInfo, "HubSpot")) {
+        $detectedCMS = "HubSpot";
+    }elseif (strpos($generatorInfo, "TremediaCMS")) {
+        $detectedCMS = "TremediaCMS";
     }
 
     // Prevent showing a false CMS Version when Elementor is present in the generator tag.
