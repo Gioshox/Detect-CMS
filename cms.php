@@ -9,7 +9,6 @@ set_time_limit(0);
 $time = time();
 
 // Indicate that the process has started.
-$currentRow = 0;
 echo "\nStarting process...\n";
 
 // Array to store processed URLs
@@ -49,13 +48,12 @@ function CMSdetectWithVersion($url) {
         "WordPress2" => '/<meta\s+name="generator"\s+content="WordPress\s+([\d.]+)"/',
         "Joomla" => '/<meta name="generator" content="Joomla! (\d+\.\d+)/',
         "Liferay" => '/Powered by Liferay (\d+\.\d+\.\d+)/',
-        "Elementor" => '/<meta name="generator" content="Elementor (\d+(\.\d+)*)/',
         "HubSpot" => '/<meta name="generator" content="HubSpot"/',
         "WPML" => '/<meta name="generator" content="WPML ver:4\.6\.5 stt:1,18;">/',
         "Odoo" => '/<meta name="generator" content="Odoo"/',
         "Webflow" => '/<meta\s+content="Webflow"\s+name="generator">/',
         "Wix.com Website Builder" => '/<meta\s+name="generator"\s+content="Wix\.com Website Builder">/',
-        "concrete5" => '/<meta\s+name="generator"\s+content="concrete5\s+-\s+(\d+\.\d+\.\d+(\.\d+)?)">/',
+        "concrete5" => '/<meta[^>]*name="generator"[^>]*content="concrete5\s*-\s*\d+\.\d+\.\d+\.\d+"/i',
         "Joomla2" => '/<meta\s+name="generator"\s+content="Joomla!?\s*-\s*([\w\s]+)">/',
         "Chilisystem" => '/<meta\s+name="Generator"\s+content="Chilisystem,\s+(https:\/\/www\.chilisystem\.fi\/)?([\w\s\.]+)">/',
         "Joomla3" => '/<meta\s+name="generator"\s+content="Helix Ultimate\s+-\s+The\s+Most\s+Popular\s+Joomla!\s+Template\s+Framework\.">/',
@@ -155,7 +153,16 @@ function extractGeneratorInfo($url) {
     try {
         $cms = @get_meta_tags($url); // Use @ to suppress warnings
         if (!empty($cms['generator'])) {
-            return "Generator Info: " . trim($cms['generator'], "'\""); // Format and return Generator Info
+            $generatorInfo = trim($cms['generator'], "'\"");
+            
+            // Extract version using a regular expression
+            $versionPattern = '/\b\d+\.\d+\.\d+\.\d+\b/';
+            if (preg_match($versionPattern, $generatorInfo, $matches)) {
+                $version = $matches[0];
+                return "Generator Info: " . $generatorInfo . ", Version: " . $version;
+            } else {
+                return "Generator Info: " . $generatorInfo . ", Version not found";
+            }
         } else {
             return "Error: Generator Info not found for " . $url; // Return a message if Generator Info is not found
         }
@@ -215,11 +222,19 @@ foreach ($websites as $link) {
     }
 
     // detectedCMS is null or an error was encountered but my method was successfull we can use it as the CMS name.
-    
     if($detectedCMS === null && strpos($generatorInfo, "Error") === true  && $result['CMS Name'] !== null) {
         $detectedCMS = $result['CMS Name'];
     }
 
+    // Check if the detected CMS name is "concrete" and the generator info contains a version
+    if ($detectedCMS == "Concrete5" && preg_match('/\d+\.\d+\.\d+\.\d+/', $generatorInfo, $matches)) {
+        $result['CMS Version'] = $matches[0];
+    }
+
+    // Prevent showing a false CMS Version when Elementor is present in the generator tag.
+    if(strpos($generatorInfo, "Elementor") && strpos($generatorInfo, $reults['CMS Version'])) {
+        $result['CMS Version'] = null;
+    }
         $rowData = [
             'Website' => str_replace("https://", "", trim($link, "'\"")),
             'CMS Detected' => $detectedCMS,
@@ -236,8 +251,7 @@ foreach ($websites as $link) {
 
     fputcsv($outputFile, $rowData);
     fputcsv($outputFile2, $rowData2);
-    echo "\nLink: " . $link . " Done on row " . $currentRow;
-    $currentRow++;
+    echo "\nLink: " . $link . " Done";
 }
 
 fclose($outputFile);
