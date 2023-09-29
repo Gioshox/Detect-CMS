@@ -46,6 +46,7 @@ function CMSdetectWithVersion($url) {
         "Drupal" => '/<meta name="generator" content="Drupal (\d+(\.\d+)*)/',
         "WordPress" => '/<meta name="generator" content="WordPress (\d+\.\d+\.\d+)/',
         "WordPress2" => '/<meta\s+name="generator"\s+content="WordPress\s+([\d.]+)"/',
+        "WordPress3" => '/<meta\s+name="generator"\s+content="WordPress\s+([\d.]+)"/i',
         "Joomla" => '/<meta name="generator" content="Joomla! (\d+\.\d+)/',
         "Liferay" => '/Powered by Liferay (\d+\.\d+\.\d+)/',
         "HubSpot" => '/<meta name="generator" content="HubSpot"/',
@@ -156,7 +157,7 @@ function extractGeneratorInfo($url) {
             $generatorInfo = trim($cms['generator'], "'\"");
             
             // Extract version using a regular expression
-            $versionPattern = '/\b\d+\.\d+\.\d+\.\d+\b/';
+            $versionPattern = '/\b(\d+\.\d+\.\d+\.\d+|5\.8\.7|6\.3\.1)\b/';
             if (preg_match($versionPattern, $generatorInfo, $matches)) {
                 $version = $matches[0];
                 return "Generator Info: " . $generatorInfo . ", Version: " . $version;
@@ -226,13 +227,18 @@ foreach ($websites as $link) {
         $detectedCMS = $result['CMS Name'];
     }
 
-    // Check if the detected CMS name is "concrete" and the generator info contains a version
+    // Add extra detections for versions that might go unnoticed. 
+    $drupalPattern = '/(\d+)\b/';
     if ($detectedCMS == "Concrete5" && preg_match('/\d+\.\d+\.\d+\.\d+/', $generatorInfo, $matches)) {
+        $result['CMS Version'] = $matches[0];
+    } elseif (($detectedCMS == "Wordpress" || $detectedCMS == "WordPress") && (preg_match('/\b5\.8\.7\b/', $generatorInfo, $matches) || (preg_match('/\b6\.3\.1\b/', $generatorInfo, $matches) || (preg_match('/\b6\.2\.2\b/', $generatorInfo, $matches) || preg_match('/\b6\.1\.3\b/', $generatorInfo, $matches))))) {
+        $result['CMS Version'] = $matches[0];
+    } elseif ($detectedCMS == "Drupal" && preg_match($drupalPattern, $generatorInfo, $matches)) {
         $result['CMS Version'] = $matches[0];
     }
 
     // Prevent showing a false CMS Version when Elementor is present in the generator tag.
-    if(strpos($generatorInfo, "Elementor") && strpos($generatorInfo, $reults['CMS Version'])) {
+    if(strpos($generatorInfo, "Elementor") && strpos($generatorInfo, $result['CMS Version'])) {
         $result['CMS Version'] = null;
     }
         $rowData = [
