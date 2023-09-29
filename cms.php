@@ -227,14 +227,22 @@ foreach ($websites as $link) {
         $detectedCMS = $result['CMS Name'];
     }
 
-    // Add extra detections for versions that might go unnoticed. 
+    // Add extra detections for versions that might go unnoticed.
     $drupalPattern = '/(\d+)\b/';
     if ($detectedCMS == "Concrete5" && preg_match('/\d+\.\d+\.\d+\.\d+/', $generatorInfo, $matches)) {
         $result['CMS Version'] = $matches[0];
-    } elseif (($detectedCMS == "Wordpress" || $detectedCMS == "WordPress") && (preg_match('/\b5\.8\.7\b/', $generatorInfo, $matches) || (preg_match('/\b6\.3\.1\b/', $generatorInfo, $matches) || (preg_match('/\b6\.2\.2\b/', $generatorInfo, $matches) || preg_match('/\b6\.1\.3\b/', $generatorInfo, $matches))))) {
+    } elseif (($detectedCMS == "Wordpress" || $detectedCMS == "WordPress") && (preg_match('/\b4\.1\.38\b/', $generatorInfo, $matches) || (preg_match('/\b5\.5\.12\b/', $generatorInfo, $matches) || (preg_match('/\b5\.8\.2\b/', $generatorInfo, $matches) || (preg_match('/\b4\.9\.13\b/', $generatorInfo, $matches) || (preg_match('/\b5\.9\.7\b/', $generatorInfo, $matches) || (preg_match('/\b5\.8\.7\b/', $generatorInfo, $matches) || (preg_match('/\b6\.3\.1\b/', $generatorInfo, $matches) || (preg_match('/\b6\.2\.2\b/', $generatorInfo, $matches) || preg_match('/\b6\.1\.3\b/', $generatorInfo, $matches)))))))))) {
         $result['CMS Version'] = $matches[0];
     } elseif ($detectedCMS == "Drupal" && preg_match($drupalPattern, $generatorInfo, $matches)) {
         $result['CMS Version'] = $matches[0];
+    } elseif($detectedCMS == "Typo3" && (preg_match('/\b4\.4\b/', $generatorInfo, $matches))) {
+        $result['CMS Version'] = $matches[0];
+    }
+
+    if(strpos($generatorInfo, "Gatsby")) {
+        $detectedCMS = "Gatsby";
+    }elseif (strpos($generatorInfo, "Wix.com")) {
+        $detectedCMS = "Wix.com";
     }
 
     // Prevent showing a false CMS Version when Elementor is present in the generator tag.
