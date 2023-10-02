@@ -29,7 +29,7 @@ function detectCMSUsingLibrary($url) {
             return null; // return null
         }
     } catch (\Exception $e) {
-        return "Error: " . $e->getMessage(); // for some reason the whole process stops when running into an error so we need to handle it.
+        return "Error: " . $e->getMessage();
     }
 }
 
@@ -204,8 +204,14 @@ foreach ($websites as $link) {
     $detectedCMS = detectCMSUsingLibrary($link);
 
     // Check if an error occurred while detecting CMS
-    if (strpos($detectedCMS, "Error") !== false) {
-        $detectedCMS = "Error: CMS detection failed or encountered an error";
+    if (strpos($detectedCMS, "403") !== false) {
+        $detectedCMS = "Connection forbidden and resulted in a 403 error.";
+    }elseif (strpos($detectedCMS, "404") !== false) {
+        $detectedCMS = "Connection resulted in a `404 Not Found` error.";
+    }elseif (strpos($detectedCMS, "28") !== false) {
+        $detectedCMS = "Connection timed out and resulted in a cURL error 23.";
+    }elseif (strpos($detectedCMS, "429") !== false) {
+        $detectedCMS = "GET website address resulted in a 429 error: Too Many Requests.";
     }
 
     $result = CMSdetectWithVersion($link);
