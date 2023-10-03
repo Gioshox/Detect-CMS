@@ -80,6 +80,7 @@ function CMSdetectWithVersion($url) {
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
     curl_setopt($ch, CURLOPT_HEADER, false);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
     $fileContents = curl_exec($ch); // Execute cURL request
@@ -212,6 +213,8 @@ foreach ($websites as $link) {
         $detectedCMS = "Connection timed out and resulted in a cURL error 23.";
     }elseif (strpos($detectedCMS, "429") !== false) {
         $detectedCMS = "GET website address resulted in a 429 error: Too Many Requests.";
+    }elseif (strpos($detectedCMS, "502") !== false) {
+        $detectedCMS = "GET website address resulted in a Bad Gateway error.";
     }
 
     $result = CMSdetectWithVersion($link);
