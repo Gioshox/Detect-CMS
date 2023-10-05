@@ -14,6 +14,13 @@ echo "\nStarting process...\n";
 // Array to store processed URLs
 $processedUrls = [];
 
+// Import the GuzzleHttp namespace
+use GuzzleHttp\Client;
+use GuzzleHttp\Exception\RequestException;
+
+// Create a GuzzleHttp client instance
+$client = new Client();
+
 /**
  * Function to detect CMS using DetectCMS library.
  *
@@ -39,7 +46,7 @@ function detectCMSUsingLibrary($url) {
  * @param string $url The URL of the website to detect CMS for.
  * @return array An associative array containing CMS Info and JavaScript Classes.
  */
-function CMSdetectWithVersion($url) {
+function CMSdetectWithVersion($url, $client) {
     $jsClasses = "";
     $cmsPatterns = array(
         // CMS patterns
@@ -70,79 +77,87 @@ function CMSdetectWithVersion($url) {
     $cmsNameMapping = array(
         "WordPress" => array("WordPress", "WordPress2", "WordPress3"),
         "Joomla" => array("Joomla", "Joomla2", "Joomla3"),
-        // ... you can add more as needed
+        // ... (other mappings)
     );
 
     // Ensure the URL starts with "https://"
     $url = preg_replace('~^(?:f|ht)tps?://~i', 'https://', $url);
 
-    // Initialize cURL session to fetch website content
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, $url);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-    curl_setopt($ch, CURLOPT_HEADER, false);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-    $fileContents = curl_exec($ch); // Execute cURL request
-    curl_close($ch); // Close cURL session
-
-    $javascriptTags = array();
-    $jsClasses = "";
-
-    // Extract JavaScript classes from the HTML content
-    preg_match_all('/<script.*?class=["\'](.*?)["\'].*?>/', $fileContents, $javascriptTags);
-    if (!empty($javascriptTags[1])) {
-        $jsClasses = implode(', ', $javascriptTags[1]);
-    }
-
-    $cmsInfo = null;
-    $cmsVersion = null;
-
-    foreach ($cmsPatterns as $cmsName => $pattern) {
-        // Check if any HTML element matches CMS patterns
-        if (preg_match($pattern, $fileContents, $matches)) {
-            // Check if the array key 1 exists before accessing it
-            if (isset($matches[1])) {
-                $version = $matches[1];
-    
-                // Check if $cmsName should be grouped
-                foreach ($cmsNameMapping as $groupedName => $namesToGroup) {
-                    if (in_array($cmsName, $namesToGroup)) {
-                        $cmsInfo = $groupedName . " " . $version;
-                        break;
-                    }
-                }
-    
-                if (!isset($cmsInfo)) {
-                    $cmsInfo = $cmsName . " " . $version;
-                }
-    
-                $cmsVersion = $version; // For extracting the version only.
-            } else {
-                // Handle the case where array key 1 doesn't exist
-                $version = null;
-                $cmsName = null;
-                $cmsInfo = null; // Format CMS info as "CMSName Version"
-                $cmsVersion = $version; // For extracting the version only.
-            }
-            break;
+    try {
+        $response = $client->get($url);
+        $fileContents = $response->getBody()->getContents();
+        
+        // Extract JavaScript classes from the HTML content
+        $javascriptTags = array();
+        preg_match_all('/<script.*?class=["\'](.*?)["\'].*?>/', $fileContents, $javascriptTags);
+        if (!empty($javascriptTags[1])) {
+            $jsClasses = implode(', ', $javascriptTags[1]);
         }
-    }
-    
 
-    /* Uncomment this if you wan't to set a value for null like Unknown for example.
-    if ($cmsInfo == null) {
-        $cmsInfo = "Unknown"; // Set as "Unknown" if no CMS is detected
-    }
-    */
+        $cmsInfo = null;
+        $cmsVersion = null;
 
-    // Return CMS information and JavaScript classes as an associative array
-    return [
-        'CMS Info' => $cmsInfo,
-        'CMS Name' => $cmsName,
-        'CMS Version' => $cmsVersion,
-        'JavaScript Classes' => $jsClasses,
-    ];
+        foreach ($cmsPatterns as $cmsName => $pattern) {
+            // Check if any HTML element matches CMS patterns
+            if (preg_match($pattern, $fileContents, $matches)) {
+                // Check if the array key 1 exists before accessing it
+                if (isset($matches[1])) {
+                    $version = $matches[1];
+
+                    // Check if $cmsName should be grouped
+                    foreach ($cmsNameMapping as $groupedName => $namesToGroup) {
+                        if (in_array($cmsName, $namesToGroup)) {
+                            $cmsInfo = $groupedName . " " . $version;
+                            break;
+                        }
+                    }
+
+                    if (!isset($cmsInfo)) {
+                        $cmsInfo = $cmsName . " " . $version;
+                    }
+
+                    $cmsVersion = $version; // For extracting the version only.
+                } else {
+                    // Handle the case where array key 1 doesn't exist
+                    $version = null;
+                    $cmsName = null;
+                    $cmsInfo = null; // Format CMS info as "CMSName Version"
+                    $cmsVersion = $version; // For extracting the version only.
+                }
+                break;
+            }
+        }
+
+        /* Uncomment this if you want to set a value for null like Unknown, for example.
+        if ($cmsInfo == null) {
+            $cmsInfo = "Unknown"; // Set as "Unknown" if no CMS is detected
+        }
+        */
+
+        // Return CMS information and JavaScript classes as an associative array
+        return [
+            'CMS Info' => $cmsInfo,
+            'CMS Name' => $cmsName,
+            'CMS Version' => $cmsVersion,
+            'JavaScript Classes' => $jsClasses,
+        ];
+    } catch (RequestException $e) {
+        // Handle request exceptions (e.g., 404, 403, timeouts) here
+        // You can access the response code like this: $e->getResponse()->getStatusCode()
+        return [
+            'CMS Info' => "Error: " . $e->getMessage(),
+            'CMS Name' => null,
+            'CMS Version' => null,
+            'JavaScript Classes' => null,
+        ];
+    } catch (Exception $e) {
+        return [
+            'CMS Info' => "Error: " . $e->getMessage(),
+            'CMS Name' => null,
+            'CMS Version' => null,
+            'JavaScript Classes' => null,
+        ];
+    }
 }
 
 /**
@@ -217,7 +232,7 @@ foreach ($websites as $link) {
         $detectedCMS = "GET website address resulted in a Bad Gateway error.";
     }
 
-    $result = CMSdetectWithVersion($link);
+    $result = CMSdetectWithVersion($link, $client);
 
     // Check if an error occurred while detecting CMS with version
     if (strpos($result['CMS Info'], "Error") !== false) {
