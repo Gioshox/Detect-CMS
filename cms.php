@@ -2,6 +2,9 @@
 // Include necessary libraries
 include(__DIR__ . "/vendor/autoload.php");
 
+// Determines wheter to also print out a debug.csv which contains more information for debugging purposes.
+$debug = false;
+
 // Set the script execution time to unlimited
 set_time_limit(0);
 
@@ -25,7 +28,7 @@ $client = new Client();
  * Function to detect CMS using DetectCMS library.
  *
  * @param string $url The URL of the website to detect CMS for.
- * @return string|null The detected CMS or null if not detected.
+ * @return string|null The detected CMS or Unknown if not detected.
  */
 function detectCMSUsingLibrary($url) {
     try {
@@ -33,7 +36,7 @@ function detectCMSUsingLibrary($url) {
         if ($cms->getResult()) {
             return $cms->getResult(); // return results
         } else {
-            return null; // return null
+            return "Unknown"; // return Unknown
         }
     } catch (\Exception $e) {
         return "Error: " . $e->getMessage();
@@ -128,11 +131,9 @@ function CMSdetectWithVersion($url, $client) {
             }
         }
 
-        /* Uncomment this if you want to set a value for null like Unknown, for example.
         if ($cmsInfo == null) {
             $cmsInfo = "Unknown"; // Set as "Unknown" if no CMS is detected
         }
-        */
 
         // Return CMS information and JavaScript classes as an associative array
         return [
@@ -204,11 +205,17 @@ if (($handle = fopen('list.csv', 'r')) !== false) {
     fclose($handle);
 }
 
-$outputFile = fopen('debug' . '_' . $time . '.csv', 'w');
+if($debug === true) {
+    $outputFile = fopen('debug' . '_' . $time . '.csv', 'w');
+}
+
 $outputFile2 = fopen('results' . '_' . $time . '.csv', 'w');
 
 // Add the header row
-fputcsv($outputFile, ['WWW-osoite', 'CMS', 'Lisätiedot', 'Generaattori tiedot', 'JavaScript luokat'], ',');
+if($debug === true) {
+    fputcsv($outputFile, ['WWW-osoite', 'CMS', 'Lisätiedot', 'Generaattori tiedot', 'JavaScript luokat'], ',');
+}
+
 fputcsv($outputFile2, ['WWW-osoite', 'CMS', 'Versio'], ',');
 
 foreach ($websites as $link) {
@@ -276,6 +283,8 @@ foreach ($websites as $link) {
     if(strpos($generatorInfo, "Elementor") && strpos($generatorInfo, $result['CMS Version'])) {
         $result['CMS Version'] = null;
     }
+
+    if($debug === true) {
         $rowData = [
             'Website' => str_replace("https://", "", trim($link, "'\"")),
             'CMS Detected' => $detectedCMS,
@@ -283,6 +292,7 @@ foreach ($websites as $link) {
             'Generator Info' => $generatorInfo,
             'JavaScript Classes' => "JavaScript Classes: " . $result['JavaScript Classes'],
         ];
+    }
     
         $rowData2 = [
             'Website' => str_replace("https://", "", trim($link, "'\"")),
@@ -290,12 +300,17 @@ foreach ($websites as $link) {
             'CMS Version' => trim($result['CMS Version'], "'\""),
         ];
 
-    fputcsv($outputFile, $rowData);
+    if($debug === true) {
+        fputcsv($outputFile, $rowData);
+    }
+
     fputcsv($outputFile2, $rowData2);
     echo "\nLink: " . $link . " Done";
 }
+if($debug === true) {
+    fclose($outputFile);
+}
 
-fclose($outputFile);
 fclose($outputFile2);
 echo "\nProcessing completed. Results are saved in 'results_" . $time . ".csv' and Debug information can be found in 'debug_" . $time .".csv";
 ?>
