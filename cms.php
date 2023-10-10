@@ -3,7 +3,7 @@
 include(__DIR__ . "/vendor/autoload.php");
 
 // Determines wheter to also print out a debug.csv which contains more information for debugging purposes.
-$debug = false;
+$debug = true;
 
 // Set the script execution time to unlimited
 set_time_limit(0);
@@ -30,7 +30,7 @@ $client = new Client();
  * @param string $url The URL of the website to detect CMS for.
  * @return string|null The detected CMS or Unknown if not detected.
  */
-function detectCMSUsingLibrary($url) {
+function detectCMSUsingLibrary($url, $debug) {
     try {
         $cms = new \DetectCMS\DetectCMS($url);
         if ($cms->getResult()) {
@@ -39,7 +39,12 @@ function detectCMSUsingLibrary($url) {
             return "Unknown"; // return Unknown
         }
     } catch (\Exception $e) {
-        return "Error: " . $e->getMessage();
+        if($debug === true) {
+            return "Error: " . $e->getMessage();
+        } else {
+            return "Error site not found.";
+        }
+        
     }
 }
 
@@ -49,7 +54,7 @@ function detectCMSUsingLibrary($url) {
  * @param string $url The URL of the website to detect CMS for.
  * @return array An associative array containing CMS Info and JavaScript Classes.
  */
-function CMSdetectWithVersion($url, $client) {
+function CMSdetectWithVersion($url, $client, $debug) {
     $jsClasses = "";
     $cmsPatterns = array(
         // CMS patterns
@@ -145,19 +150,37 @@ function CMSdetectWithVersion($url, $client) {
     } catch (RequestException $e) {
         // Handle request exceptions (e.g., 404, 403, timeouts) here
         // You can access the response code like this: $e->getResponse()->getStatusCode()
-        return [
-            'CMS Info' => "Error: " . $e->getMessage(),
-            'CMS Name' => null,
-            'CMS Version' => null,
-            'JavaScript Classes' => null,
-        ];
+        if ($debug === true) {
+            return [
+                'CMS Info' => "Error: " . $e->getMessage(),
+                'CMS Name' => null,
+                'CMS Version' => null,
+                'JavaScript Classes' => null,
+            ];
+        } else {
+            return [
+                'CMS Info' => "Error site not found.",
+                'CMS Name' => null,
+                'CMS Version' => null,
+                'JavaScript Classes' => null,
+            ];
+        }
     } catch (Exception $e) {
-        return [
-            'CMS Info' => "Error: " . $e->getMessage(),
-            'CMS Name' => null,
-            'CMS Version' => null,
-            'JavaScript Classes' => null,
-        ];
+        if ($debug === true) {
+            return [
+                'CMS Info' => "Error: " . $e->getMessage(),
+                'CMS Name' => null,
+                'CMS Version' => null,
+                'JavaScript Classes' => null,
+            ];
+        } else {
+            return [
+                'CMS Info' => "Error site not found.",
+                'CMS Name' => null,
+                'CMS Version' => null,
+                'JavaScript Classes' => null,
+            ];
+        }
     }
 }
 
@@ -167,7 +190,7 @@ function CMSdetectWithVersion($url, $client) {
  * @param string $url The URL of the website to extract Generator Info from.
  * @return string The Generator Info or a message if not found.
  */
-function extractGeneratorInfo($url) {
+function extractGeneratorInfo($url, $debug) {
     try {
         $cms = @get_meta_tags($url); // Use @ to suppress warnings
         if (!empty($cms['generator'])) {
@@ -182,10 +205,14 @@ function extractGeneratorInfo($url) {
                 return "Generator Info: " . $generatorInfo . ", Version not found";
             }
         } else {
-            return "Error: Generator Info not found for " . $url; // Return a message if Generator Info is not found
+            return "Generator Info not found."; // Return a message if Generator Info is not found
         }
     } catch (Exception $e) {
-        return "Error: Generator Info extraction failed or encountered an error: " . $e->getMessage(); // Handle exceptions and return an error message
+        if ($debug === true) {
+            return "Error: Generator Info extraction failed or encountered an error: " . $e->getMessage();
+        } else {
+            return "Error site not found."; // Handle exceptions and return an error message
+        }
     }
 }
 
@@ -205,18 +232,14 @@ if (($handle = fopen('list.csv', 'r')) !== false) {
     fclose($handle);
 }
 
-if($debug === true) {
-    $outputFile = fopen('debug' . '_' . $time . '.csv', 'w');
-}
-
-$outputFile2 = fopen('results' . '_' . $time . '.csv', 'w');
+$outputFile = fopen('results' . '_' . $time . '.csv', 'w');
 
 // Add the header row
 if($debug === true) {
     fputcsv($outputFile, ['WWW-osoite', 'CMS', 'Lisätiedot', 'Generaattori tiedot', 'JavaScript luokat'], ',');
+} else {
+    fputcsv($outputFile, ['WWW-osoite', 'CMS', 'Versio'], ',');
 }
-
-fputcsv($outputFile2, ['WWW-osoite', 'CMS', 'Versio'], ',');
 
 foreach ($websites as $link) {
     $link = trim($link, "; \t\n\r\0\x0B");
@@ -224,29 +247,16 @@ foreach ($websites as $link) {
         $link = "https://" . $link;
     }
 
-    $detectedCMS = detectCMSUsingLibrary($link);
+    $detectedCMS = detectCMSUsingLibrary($link, $debug);
 
-    // Check if an error occurred while detecting CMS
-    if (strpos($detectedCMS, "403") !== false) {
-        $detectedCMS = "Connection forbidden and resulted in a 403 error.";
-    }elseif (strpos($detectedCMS, "404") !== false) {
-        $detectedCMS = "Connection resulted in a `404 Not Found` error.";
-    }elseif (strpos($detectedCMS, "28") !== false) {
-        $detectedCMS = "Connection timed out and resulted in a cURL error 23.";
-    }elseif (strpos($detectedCMS, "429") !== false) {
-        $detectedCMS = "GET website address resulted in a 429 error: Too Many Requests.";
-    }elseif (strpos($detectedCMS, "502") !== false) {
-        $detectedCMS = "GET website address resulted in a Bad Gateway error.";
-    }
-
-    $result = CMSdetectWithVersion($link, $client);
+    $result = CMSdetectWithVersion($link, $client, $debug);
 
     // Check if an error occurred while detecting CMS with version
     if (strpos($result['CMS Info'], "Error") !== false) {
         $result['CMS Info'] = "Error: CMS detection failed or encountered an error";
     }
 
-    $generatorInfo = extractGeneratorInfo($link);
+    $generatorInfo = extractGeneratorInfo($link, $debug);
 
     // Check if an error occurred while extracting Generator Info
     if (strpos($generatorInfo, "Error") !== false) {
@@ -292,29 +302,18 @@ foreach ($websites as $link) {
             'Generator Info' => $generatorInfo,
             'JavaScript Classes' => "JavaScript Classes: " . $result['JavaScript Classes'],
         ];
-    }
-    
-        $rowData2 = [
+    } else {
+        $rowData = [
             'Website' => str_replace("https://", "", trim($link, "'\"")),
             'CMS Detected' => $detectedCMS,
             'CMS Version' => trim($result['CMS Version'], "'\""),
         ];
-
-    if($debug === true) {
-        fputcsv($outputFile, $rowData);
     }
-
-    fputcsv($outputFile2, $rowData2);
+    
+    fputcsv($outputFile, $rowData);
     echo "\nLink: " . $link . " Done";
 }
-if($debug === true) {
-    fclose($outputFile);
-}
 
-fclose($outputFile2);
-if($debug === true){
-    echo "\nProcessing completed. Results are saved in 'results_" . $time . ".csv \n Debug information can be found in debug_" . $time .".csv";
-}else {
-    echo "\nProcessing completed. Results are saved in 'results_" . $time . ".csv";
-}
+fclose($outputFile);
+echo "\nProcessing completed. Results are saved in 'results_" . $time . ".csv";
 ?>
