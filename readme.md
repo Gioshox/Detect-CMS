@@ -38,11 +38,15 @@ example5.com
 
 2. Run the script by executing the following command:
 
-   `php cms.php`
+   `php cms.php -f yourlist.csv`
 
-3. The script will process each website URL from the `list.csv` file, detect the CMS, and generate a `results_timestamp.csv` file with the detected information. The timestamp in the filename ensures that each run creates a unique output file.
+3. To print out debug information with the results you can executing the following command:
 
-4. Once the script has finished processing all websites, you will see a completion message in the terminal.
+   `php cms.php -d -f yourlist.csv`
+
+4. The script will process each website URL from the `yourlist.csv` file, detect the CMS, and generate a `results_timestamp.csv` file with the detected information. The timestamp in the filename ensures that each run creates a unique output file.
+
+5. Once the script has finished processing all websites, you will see a completion message in the terminal.
 
 ## Output
 

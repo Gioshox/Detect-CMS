@@ -3,7 +3,33 @@
 include(__DIR__ . "/vendor/autoload.php");
 
 // Determines wheter to also print out a debug.csv which contains more information for debugging purposes.
-$debug = true;
+$debug = false;
+$fIndex = "";
+$filename = "";
+
+foreach ($argv as $commands => $value) {
+    if ($value == "-d") {
+        echo "\nSet Debug to true. \n";
+        $debug = true;
+    }
+
+    if ($value == "-f") {
+        if ($value === null || empty($value)) {
+            echo "Filename not set!";
+        } else {
+            $fIndex = $commands;
+        }
+        
+    }
+
+    if ($commands - 1 == $fIndex) {
+        if ($value === null || empty($value)) {
+            echo "Filename not set!";
+        } else {
+            $filename = $value;
+        }   
+    }
+}
 
 // Set the script execution time to unlimited
 set_time_limit(0);
@@ -216,104 +242,116 @@ function extractGeneratorInfo($url, $debug) {
     }
 }
 
-$websites = [];
-if (($handle = fopen('list.csv', 'r')) !== false) {
-    
-    while (($data = fgetcsv($handle)) !== false) {
-        $websiteUrl = $data[0];
-        // Check if the URL is not processed before processing it
-        if (!in_array($websiteUrl, $processedUrls)) {
-            $websites[] = $websiteUrl;
-            $processedUrls[] = $websiteUrl; // Add the URL to the processed URLs array
+if (!empty($filename)) {
+    try {
+        $websites = [];
+        if (($handle = fopen($filename, 'r')) !== false) {
+        
+            while (($data = fgetcsv($handle)) !== false) {
+                $websiteUrl = $data[0];
+                // Check if the URL is not processed before processing it
+                if (!in_array($websiteUrl, $processedUrls)) {
+                    $websites[] = $websiteUrl;
+                    $processedUrls[] = $websiteUrl; // Add the URL to the processed URLs array
+                } else {
+                    // echo "\nURL is a duplicate: " . $websiteUrl;
+                }
+            }
+            fclose($handle);
+        }
+        
+        $outputFile = fopen('results' . '_' . $time . '.csv', 'w');
+        
+        // Add the header row
+        if($debug === true) {
+            fputcsv($outputFile, ['WWW-osoite', 'CMS', 'Versio', 'Generaattori tiedot', 'JavaScript luokat'], ',');
         } else {
-            // echo "\nURL is a duplicate: " . $websiteUrl;
+            fputcsv($outputFile, ['WWW-osoite', 'CMS', 'Versio'], ',');
+        }
+    } catch (Exception $e) {
+        if ($debug === true) {
+            return "Error: " . $e->getMessage();
+        } else {
+            return "Error. Check your arguments."; // Handle exceptions and return an error message
         }
     }
-    fclose($handle);
-}
 
-$outputFile = fopen('results' . '_' . $time . '.csv', 'w');
+    foreach ($websites as $link) {
+        $link = trim($link, "; \t\n\r\0\x0B");
+        if (!preg_match("~^(?:f|ht)tps?://~i", $link)) {
+            $link = "https://" . $link;
+        }
 
-// Add the header row
-if($debug === true) {
-    fputcsv($outputFile, ['WWW-osoite', 'CMS', 'Versio', 'Generaattori tiedot', 'JavaScript luokat'], ',');
+        $detectedCMS = detectCMSUsingLibrary($link, $debug);
+
+        $result = CMSdetectWithVersion($link, $client, $debug);
+
+        // Check if an error occurred while detecting CMS with version
+        if (strpos($result['CMS Info'], "Error") !== false) {
+            $result['CMS Info'] = "Error: CMS detection failed or encountered an error";
+        }
+
+        $generatorInfo = extractGeneratorInfo($link, $debug);
+
+        // Check if an error occurred while extracting Generator Info
+        if (strpos($generatorInfo, "Error") !== false) {
+            $generatorInfo = "Error: Generator Info extraction failed or encountered an error";
+        }
+
+        // detectedCMS is null or an error was encountered but my method was successfull we can use it as the CMS name.
+        if($detectedCMS === null && strpos($generatorInfo, "Error") === true  && $result['CMS Name'] !== null) {
+            $detectedCMS = $result['CMS Name'];
+        }
+
+        // Add extra detections for versions that might go unnoticed.
+        $drupalPattern = '/(\d+)\b/';
+        if ($detectedCMS == "Concrete5" && preg_match('/\d+\.\d+\.\d+\.\d+/', $generatorInfo, $matches)) {
+            $result['CMS Version'] = $matches[0];
+        } elseif (($detectedCMS == "Wordpress" || $detectedCMS == "WordPress") && (preg_match('/\b5\.7\.9\b/', $generatorInfo, $matches) || (preg_match('/\b5\.9\.3\b/', $generatorInfo, $matches) || (preg_match('/\b5\.5\.1\b/', $generatorInfo, $matches) || (preg_match('/\b6\.0\.5\b/', $generatorInfo, $matches) || (preg_match('/\b4\.1\.38\b/', $generatorInfo, $matches) || (preg_match('/\b5\.5\.12\b/', $generatorInfo, $matches) || (preg_match('/\b5\.8\.2\b/', $generatorInfo, $matches) || (preg_match('/\b4\.9\.13\b/', $generatorInfo, $matches) || (preg_match('/\b5\.9\.7\b/', $generatorInfo, $matches) || (preg_match('/\b5\.8\.7\b/', $generatorInfo, $matches) || (preg_match('/\b6\.3\.1\b/', $generatorInfo, $matches) || (preg_match('/\b6\.2\.2\b/', $generatorInfo, $matches) || preg_match('/\b6\.1\.3\b/', $generatorInfo, $matches)))))))))))))) {
+            $result['CMS Version'] = $matches[0];
+        } elseif ($detectedCMS == "Drupal" && preg_match($drupalPattern, $generatorInfo, $matches)) {
+            $result['CMS Version'] = $matches[0];
+        } elseif($detectedCMS == "Typo3" && (preg_match('/\b4\.4\b/', $generatorInfo, $matches))) {
+            $result['CMS Version'] = $matches[0];
+        }
+
+        // Extra checks for picking up CMS names from generator info.
+        if (strpos($generatorInfo, "Gatsby")) {
+            $detectedCMS = "Gatsby";
+        }elseif (strpos($generatorInfo, "Wix.com")) {
+            $detectedCMS = "Wix.com";
+        }elseif (strpos($generatorInfo, "HubSpot")) {
+            $detectedCMS = "HubSpot";
+        }
+
+        // Prevent showing a false CMS Version when Elementor is present in the generator tag.
+        if(strpos($generatorInfo, "Elementor") && strpos($generatorInfo, $result['CMS Version'])) {
+            $result['CMS Version'] = null;
+        }
+
+        if($debug === true) {
+            $rowData = [
+                'Website' => str_replace("https://", "", trim($link, "'\"")),
+                'CMS Detected' => $detectedCMS,
+                'CMS Info' => trim($result['CMS Version'], "'\""),
+                'Generator Info' => $generatorInfo,
+                'JavaScript Classes' => "JavaScript Classes: " . $result['JavaScript Classes'],
+            ];
+        } else {
+            $rowData = [
+                'Website' => str_replace("https://", "", trim($link, "'\"")),
+                'CMS Detected' => $detectedCMS,
+                'CMS Version' => trim($result['CMS Version'], "'\""),
+            ];
+        }
+        
+        fputcsv($outputFile, $rowData);
+        echo "\nLink: " . $link . " Done";
+    }
+
+    fclose($outputFile);
+    echo "\nProcessing completed. Results are saved in 'results_" . $time . ".csv";
 } else {
-    fputcsv($outputFile, ['WWW-osoite', 'CMS', 'Versio'], ',');
+    echo "Filename not set! Check your arguments.";
 }
-
-foreach ($websites as $link) {
-    $link = trim($link, "; \t\n\r\0\x0B");
-    if (!preg_match("~^(?:f|ht)tps?://~i", $link)) {
-        $link = "https://" . $link;
-    }
-
-    $detectedCMS = detectCMSUsingLibrary($link, $debug);
-
-    $result = CMSdetectWithVersion($link, $client, $debug);
-
-    // Check if an error occurred while detecting CMS with version
-    if (strpos($result['CMS Info'], "Error") !== false) {
-        $result['CMS Info'] = "Error: CMS detection failed or encountered an error";
-    }
-
-    $generatorInfo = extractGeneratorInfo($link, $debug);
-
-    // Check if an error occurred while extracting Generator Info
-    if (strpos($generatorInfo, "Error") !== false) {
-        $generatorInfo = "Error: Generator Info extraction failed or encountered an error";
-    }
-
-    // detectedCMS is null or an error was encountered but my method was successfull we can use it as the CMS name.
-    if($detectedCMS === null && strpos($generatorInfo, "Error") === true  && $result['CMS Name'] !== null) {
-        $detectedCMS = $result['CMS Name'];
-    }
-
-    // Add extra detections for versions that might go unnoticed.
-    $drupalPattern = '/(\d+)\b/';
-    if ($detectedCMS == "Concrete5" && preg_match('/\d+\.\d+\.\d+\.\d+/', $generatorInfo, $matches)) {
-        $result['CMS Version'] = $matches[0];
-    } elseif (($detectedCMS == "Wordpress" || $detectedCMS == "WordPress") && (preg_match('/\b5\.7\.9\b/', $generatorInfo, $matches) || (preg_match('/\b5\.9\.3\b/', $generatorInfo, $matches) || (preg_match('/\b5\.5\.1\b/', $generatorInfo, $matches) || (preg_match('/\b6\.0\.5\b/', $generatorInfo, $matches) || (preg_match('/\b4\.1\.38\b/', $generatorInfo, $matches) || (preg_match('/\b5\.5\.12\b/', $generatorInfo, $matches) || (preg_match('/\b5\.8\.2\b/', $generatorInfo, $matches) || (preg_match('/\b4\.9\.13\b/', $generatorInfo, $matches) || (preg_match('/\b5\.9\.7\b/', $generatorInfo, $matches) || (preg_match('/\b5\.8\.7\b/', $generatorInfo, $matches) || (preg_match('/\b6\.3\.1\b/', $generatorInfo, $matches) || (preg_match('/\b6\.2\.2\b/', $generatorInfo, $matches) || preg_match('/\b6\.1\.3\b/', $generatorInfo, $matches)))))))))))))) {
-        $result['CMS Version'] = $matches[0];
-    } elseif ($detectedCMS == "Drupal" && preg_match($drupalPattern, $generatorInfo, $matches)) {
-        $result['CMS Version'] = $matches[0];
-    } elseif($detectedCMS == "Typo3" && (preg_match('/\b4\.4\b/', $generatorInfo, $matches))) {
-        $result['CMS Version'] = $matches[0];
-    }
-
-    // Extra checks for picking up CMS names from generator info.
-    if (strpos($generatorInfo, "Gatsby")) {
-        $detectedCMS = "Gatsby";
-    }elseif (strpos($generatorInfo, "Wix.com")) {
-        $detectedCMS = "Wix.com";
-    }elseif (strpos($generatorInfo, "HubSpot")) {
-        $detectedCMS = "HubSpot";
-    }
-
-    // Prevent showing a false CMS Version when Elementor is present in the generator tag.
-    if(strpos($generatorInfo, "Elementor") && strpos($generatorInfo, $result['CMS Version'])) {
-        $result['CMS Version'] = null;
-    }
-
-    if($debug === true) {
-        $rowData = [
-            'Website' => str_replace("https://", "", trim($link, "'\"")),
-            'CMS Detected' => $detectedCMS,
-            'CMS Info' => trim($result['CMS Version'], "'\""),
-            'Generator Info' => $generatorInfo,
-            'JavaScript Classes' => "JavaScript Classes: " . $result['JavaScript Classes'],
-        ];
-    } else {
-        $rowData = [
-            'Website' => str_replace("https://", "", trim($link, "'\"")),
-            'CMS Detected' => $detectedCMS,
-            'CMS Version' => trim($result['CMS Version'], "'\""),
-        ];
-    }
-    
-    fputcsv($outputFile, $rowData);
-    echo "\nLink: " . $link . " Done";
-}
-
-fclose($outputFile);
-echo "\nProcessing completed. Results are saved in 'results_" . $time . ".csv";
 ?>
