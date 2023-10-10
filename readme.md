@@ -7,7 +7,6 @@ This PHP script is designed to detect Content Management Systems (CMS) and relat
 - Detects the CMS used on websites.
 - Extracts CMS version (if available) and Generator Info.
 - Collects JavaScript classes used on the websites.
-- Handles exceptions and errors gracefully.
 
 ## Prerequisites
 
@@ -22,7 +21,7 @@ Before running the script, ensure you have the following prerequisites:
 
 2. Navigate to the project directory:
 
-3. Install PHP dependencies using Composer:
+3. Install PHP dependencies using Composer
 
 ## Usage
 
@@ -55,10 +54,6 @@ The script generates a CSV file named `results_timestamp.csv` containing the fol
 - `Generator Info`: Information extracted from the website's meta tags (if available).
 - `JavaScript Classes`: A list of JavaScript classes found on the website.
 
-## Contributing
-
-Contributions and improvements to this script are welcome. Feel free to submit issues or pull requests on the [GitHub repository](https://github.com/Gioshox/Detect-CMS).
-
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
@@ -66,14 +61,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Third-Party Code
 
 This project includes code from a third-party source (RED_HAWK) under the MIT License. You can find the full license text in the `THIRD-PARTY-LICENSE` file in the root directory of this project.
-
-## Acknowledgments
-
-This project was inspired by the RED_HAWK project, which provided the initial code for CMS detection. While the original code has undergone significant modifications, we acknowledge its influence on this project.
-
-This project was made possible with the help of various online communities, forums, and resources. We would like to express our gratitude to the developers and contributors who have shared their knowledge and insights.
-
-- [RED_HAWK](https://github.com/Tuhinshubhra/RED_HAWK)
-- [PHP Documentation](https://www.php.net/docs.php)
-- [Stack Overflow](https://stackoverflow.com/)
-- [GitHub Community](https://github.community/)
