@@ -312,5 +312,9 @@ if($debug === true) {
 }
 
 fclose($outputFile2);
-echo "\nProcessing completed. Results are saved in 'results_" . $time . ".csv' and Debug information can be found in 'debug_" . $time .".csv";
+if($debug === true){
+    echo "\nProcessing completed. Results are saved in 'results_" . $time . ".csv \n Debug information can be found in debug_" . $time .".csv";
+}else {
+    echo "\nProcessing completed. Results are saved in 'results_" . $time . ".csv";
+}
 ?>
