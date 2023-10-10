@@ -157,7 +157,7 @@ class Wordpress extends \DetectCMS\DetectCMS {
 			if($html = str_get_html($this->home_html)) {
 
 				foreach($html->find('link') as $element) {
-					if (strpos($element->href, 'wp-json') !==FALSE)
+					if (strpos($element->href, 'wp-json' || 'wp-content') !==FALSE)
 						return true;
 				}
 			}
