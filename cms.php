@@ -236,7 +236,7 @@ $outputFile = fopen('results' . '_' . $time . '.csv', 'w');
 
 // Add the header row
 if($debug === true) {
-    fputcsv($outputFile, ['WWW-osoite', 'CMS', 'Lisätiedot', 'Generaattori tiedot', 'JavaScript luokat'], ',');
+    fputcsv($outputFile, ['WWW-osoite', 'CMS', 'Versio', 'Generaattori tiedot', 'JavaScript luokat'], ',');
 } else {
     fputcsv($outputFile, ['WWW-osoite', 'CMS', 'Versio'], ',');
 }
